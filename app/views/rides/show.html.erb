@@ -1,0 +1,67 @@
+<% content_for :title, "Ride ##{@ride.id} - Medride" %>
+
+<h1 class="text-2xl font-semibold mb-1">Ride #<%= @ride.id %></h1>
+<p class="text-sm text-gray-500 mb-6">
+  <%= @ride.patient.name %> &middot; <%= @ride.level_of_service.humanize %> &middot; <%= @ride.scheduled_at.strftime("%b %-d, %Y %-I:%M%p") %>
+</p>
+
+<div class="flex items-center gap-3 mb-8">
+  <span class="inline-block rounded-full px-3 py-1 text-sm font-medium bg-gray-900 text-white"><%= @ride.status.humanize %></span>
+  <% if @ride.needs_authorization? %>
+    <span class="inline-block rounded-full px-3 py-1 text-sm font-medium bg-yellow-100 text-yellow-800">Needs authorization</span>
+  <% end %>
+  <% if @ride.active_claim %>
+    <span class="text-sm text-gray-600">Claimed by <%= @ride.active_claim.transport_provider.name %></span>
+  <% end %>
+</div>
+
+<% if current_transport_provider && @ride.active_claim&.transport_provider == current_transport_provider %>
+  <div class="flex gap-2 mb-8">
+    <% if @ride.can_start? %>
+      <%= button_to "Start", start_ride_path(@ride), method: :patch, class: "bg-gray-900 text-white rounded px-3 py-1.5 text-sm cursor-pointer" %>
+    <% end %>
+    <% if @ride.can_complete? %>
+      <%= button_to "Complete", complete_ride_path(@ride), method: :patch, class: "bg-gray-900 text-white rounded px-3 py-1.5 text-sm cursor-pointer" %>
+    <% end %>
+    <% if @ride.can_release? %>
+      <%= button_to "Release", ride_claim_path(@ride), method: :delete, class: "border rounded px-3 py-1.5 text-sm cursor-pointer" %>
+    <% end %>
+  </div>
+<% end %>
+
+<section class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+  <div>
+    <h2 class="text-sm font-medium text-gray-500 mb-1">Pickup</h2>
+    <p><%= @ride.pickup_address_line1 %></p>
+    <p><%= @ride.pickup_city %>, <%= @ride.pickup_state %> <%= @ride.pickup_zip %></p>
+  </div>
+  <div>
+    <h2 class="text-sm font-medium text-gray-500 mb-1">Dropoff</h2>
+    <p><%= @ride.dropoff_address_line1 %></p>
+    <p><%= @ride.dropoff_city %>, <%= @ride.dropoff_state %> <%= @ride.dropoff_zip %></p>
+  </div>
+</section>
+
+<section>
+  <h2 class="text-lg font-medium mb-3">Status audit trail</h2>
+  <table class="w-full text-sm border-collapse">
+    <thead>
+      <tr class="text-left text-gray-500 border-b">
+        <th class="py-2 pr-4">When</th>
+        <th class="py-2 pr-4">From</th>
+        <th class="py-2 pr-4">To</th>
+        <th class="py-2">Actor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @ride.ride_status_events.each do |event| %>
+        <tr class="border-b last:border-0">
+          <td class="py-2 pr-4"><%= event.occurred_at.strftime("%b %-d %-I:%M:%S%p") %></td>
+          <td class="py-2 pr-4"><%= event.from_status&.humanize || "—" %></td>
+          <td class="py-2 pr-4"><%= event.to_status.humanize %></td>
+          <td class="py-2"><%= event.actor_label %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>

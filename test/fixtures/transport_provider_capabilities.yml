@@ -1,0 +1,11 @@
+acme_wheelchair:
+  transport_provider: acme
+  capability: 2 # wheelchair_van
+
+acme_sedan:
+  transport_provider: acme
+  capability: 1 # medical_sedan
+
+beta_ambulance:
+  transport_provider: beta
+  capability: 4 # bls_ambulance

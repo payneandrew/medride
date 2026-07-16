@@ -1,0 +1,106 @@
+#!/usr/bin/env ruby
+require_relative "../config/environment"
+
+# Walks one ride through its entire lifecycle end-to-end against real
+# services: a live FHIR test server for the import step, and the actual
+# HMAC-signed webhook endpoint (not a shortcut call into the job) for the
+# status updates — the same path a real vendor integration would hit. Meant
+# to be run after `bin/rails db:seed`.
+
+puts "== 1. Import patient from EHR =="
+fhir_client = Fhir::Client.new
+fhir_patient = fhir_client.fetch_patient("137019620")
+abort "Could not fetch patient 137019620 from #{Fhir::Client::BASE_URL}" unless fhir_patient
+
+patient = Patient.find_or_initialize_by(fhir_id: fhir_patient.fhir_id)
+if patient.new_record?
+  patient.mobility_needs = "wheelchair"
+  patient.benefit_plan = BenefitPlan.find_by(name: "Basic Medicaid")
+end
+patient.first_name = fhir_patient.given_name
+patient.last_name = fhir_patient.family_name
+patient.phone = fhir_patient.phone
+patient.home_address_line1 = fhir_patient.address_line1
+patient.home_city = fhir_patient.city
+patient.home_state = fhir_patient.state
+patient.home_zip = fhir_patient.postal_code
+patient.save!
+puts "Imported #{patient.name} (FHIR id #{patient.fhir_id}) from the HAPI test server"
+
+appointments = fhir_client.fetch_appointments(fhir_patient.fhir_id)
+upcoming = appointments.select { |a| a.start_time&.future? }.min_by(&:start_time)
+scheduled_at = upcoming&.start_time || 2.days.from_now
+puts(upcoming ? "Found upcoming appointment at #{scheduled_at}" : "No upcoming appointment found on the FHIR server, defaulting to #{scheduled_at}")
+
+puts "\n== 2. Eligibility check =="
+level_of_service = "wheelchair_van"
+eligibility = EligibilityCheck.call(Fhir::EligibilityRequest.new(patient: patient, level_of_service: level_of_service))
+puts "covered=#{eligibility.covered?} remaining_trips=#{eligibility.remaining_trips.inspect} prior_auth_required=#{eligibility.prior_auth_required?}"
+abort "Patient is not covered for #{level_of_service} — check db/seeds.rb benefit plans" unless eligibility.covered?
+
+puts "\n== 3. Book the ride =="
+coordinator = Coordinator.first or abort "No coordinators found — run `bin/rails db:seed` first"
+ride = Ride.create!(
+  patient: patient, coordinator: coordinator,
+  pickup_address_line1: patient.home_address_line1, pickup_city: patient.home_city,
+  pickup_state: patient.home_state, pickup_zip: patient.home_zip,
+  dropoff_address_line1: "TBD - confirm destination with facility",
+  dropoff_city: patient.home_city, dropoff_state: patient.home_state, dropoff_zip: patient.home_zip,
+  scheduled_at: scheduled_at, level_of_service: level_of_service,
+  needs_authorization: eligibility.prior_auth_required?
+)
+puts "Booked ride ##{ride.id}, status=#{ride.status}, needs_authorization=#{ride.needs_authorization?}"
+
+puts "\n== 4. Match to eligible providers =="
+matches = MatchRide.call(ride)
+abort "No matching providers found for zip #{ride.pickup_zip} / #{level_of_service} — check db/seeds.rb" if matches.empty?
+puts "Eligible providers: #{matches.map(&:name).join(', ')}"
+
+puts "\n== 5. Provider claims the ride =="
+provider = matches.first
+ride.claim!(provider)
+puts "#{provider.name} claimed ride ##{ride.id}, status=#{ride.status}"
+
+puts "\n== 6. Vendor webhook drives status forward =="
+
+def fire_signed_webhook(ride, status, provider)
+  payload = {
+    event_id: SecureRandom.uuid, ride_id: ride.id, status: status,
+    transport_provider_id: provider.id, occurred_at: Time.current.iso8601
+  }.compact.to_json
+
+  session = ActionDispatch::Integration::Session.new(Rails.application)
+  session.host! "localhost"
+  session.post "/webhooks/ride_status", params: payload, headers: {
+    "Content-Type" => "application/json",
+    "X-Medride-Signature" => RideStatusWebhookSigner.sign(payload)
+  }
+  puts "  webhook #{status.inspect} => #{session.response.status} #{session.response.body}"
+end
+
+def wait_until_status(ride, status, timeout: 5)
+  deadline = Time.current + timeout
+  loop do
+    ride.reload
+    break true if ride.status == status
+    break false if Time.current > deadline
+
+    sleep 0.1
+  end
+end
+
+fire_signed_webhook(ride, "in_progress", provider)
+abort "Ride did not reach in_progress in time" unless wait_until_status(ride, "in_progress")
+puts "Ride status now: #{ride.status}"
+
+fire_signed_webhook(ride, "completed", provider)
+abort "Ride did not reach completed in time" unless wait_until_status(ride, "completed")
+puts "Ride status now: #{ride.status}"
+
+puts "\n== 7. Status audit trail =="
+ride.ride_status_events.order(:occurred_at).each do |event|
+  puts format("  %-9s  %-12s -> %-12s  (%s)",
+    event.occurred_at.strftime("%H:%M:%S"), event.from_status || "—", event.to_status, event.actor_label)
+end
+
+puts "\nDone — ride ##{ride.id} walked end-to-end: import -> eligibility -> book -> claim -> webhook updates -> completed."

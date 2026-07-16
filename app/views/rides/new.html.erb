@@ -1,0 +1,53 @@
+<% content_for :title, "Book a ride - Medride" %>
+
+<h1 class="text-2xl font-semibold mb-6">Book a ride</h1>
+
+<%= form_with model: @ride, class: "space-y-6" do |f| %>
+  <% if @ride.errors.any? %>
+    <div class="rounded bg-red-50 text-red-800 px-4 py-3 text-sm">
+      <p class="font-medium mb-1"><%= pluralize(@ride.errors.count, "error") %> prevented this ride from saving:</p>
+      <ul class="list-disc list-inside">
+        <% @ride.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= f.label :patient_id, class: "block text-sm font-medium mb-1" %>
+    <%= f.collection_select :patient_id, Patient.order(:last_name), :id, :name, {}, class: "border rounded px-3 py-2 w-full" %>
+  </div>
+
+  <div>
+    <%= f.label :scheduled_at, class: "block text-sm font-medium mb-1" %>
+    <%= f.datetime_field :scheduled_at, class: "border rounded px-3 py-2 w-full" %>
+  </div>
+
+  <div>
+    <%= f.label :level_of_service, class: "block text-sm font-medium mb-1" %>
+    <%= f.select :level_of_service, Ride.level_of_services.keys.map { |k| [ k.humanize, k ] }, {}, class: "border rounded px-3 py-2 w-full" %>
+  </div>
+
+  <fieldset class="border rounded p-4">
+    <legend class="text-sm font-medium px-1">Pickup</legend>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <%= f.text_field :pickup_address_line1, placeholder: "Address", class: "border rounded px-3 py-2 sm:col-span-2" %>
+      <%= f.text_field :pickup_city, placeholder: "City", class: "border rounded px-3 py-2" %>
+      <%= f.text_field :pickup_state, placeholder: "State", class: "border rounded px-3 py-2" %>
+      <%= f.text_field :pickup_zip, placeholder: "Zip", class: "border rounded px-3 py-2" %>
+    </div>
+  </fieldset>
+
+  <fieldset class="border rounded p-4">
+    <legend class="text-sm font-medium px-1">Dropoff</legend>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <%= f.text_field :dropoff_address_line1, placeholder: "Address", class: "border rounded px-3 py-2 sm:col-span-2" %>
+      <%= f.text_field :dropoff_city, placeholder: "City", class: "border rounded px-3 py-2" %>
+      <%= f.text_field :dropoff_state, placeholder: "State", class: "border rounded px-3 py-2" %>
+      <%= f.text_field :dropoff_zip, placeholder: "Zip", class: "border rounded px-3 py-2" %>
+    </div>
+  </fieldset>
+
+  <%= f.submit "Book ride", class: "bg-gray-900 text-white rounded px-4 py-2 cursor-pointer" %>
+<% end %>

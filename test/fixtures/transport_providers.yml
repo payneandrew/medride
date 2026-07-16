@@ -1,0 +1,9 @@
+acme:
+  name: Acme Transport
+  phone: "555-2222"
+  service_area: ["62704", "62701"]
+
+beta:
+  name: Beta Medical Transport
+  phone: "555-3333"
+  service_area: ["62999"]

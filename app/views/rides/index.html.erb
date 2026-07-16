@@ -1,0 +1,90 @@
+<% content_for :title, "Rides - Medride" %>
+
+<% if current_transport_provider %>
+  <h1 class="text-2xl font-semibold mb-6">Rides for <%= current_transport_provider.name %></h1>
+
+  <section class="mb-10">
+    <h2 class="text-lg font-medium mb-3">My active rides</h2>
+    <% if @my_rides.empty? %>
+      <p class="text-sm text-gray-500">Nothing claimed right now.</p>
+    <% else %>
+      <div class="space-y-3">
+        <% @my_rides.each do |ride| %>
+          <div class="border rounded p-4 flex items-center justify-between">
+            <div>
+              <p class="font-medium"><%= link_to ride.patient.name, ride_path(ride), class: "underline" %></p>
+              <p class="text-sm text-gray-500">
+                <%= ride.level_of_service.humanize %> &middot; <%= ride.scheduled_at.strftime("%b %-d, %-I:%M%p") %> &middot; <%= ride.status.humanize %>
+              </p>
+            </div>
+            <div class="flex gap-2">
+              <% if ride.can_start? %>
+                <%= button_to "Start", start_ride_path(ride), method: :patch, class: "bg-gray-900 text-white rounded px-3 py-1.5 text-sm cursor-pointer" %>
+              <% end %>
+              <% if ride.can_complete? %>
+                <%= button_to "Complete", complete_ride_path(ride), method: :patch, class: "bg-gray-900 text-white rounded px-3 py-1.5 text-sm cursor-pointer" %>
+              <% end %>
+              <% if ride.can_release? %>
+                <%= button_to "Release", ride_claim_path(ride), method: :delete, class: "border rounded px-3 py-1.5 text-sm cursor-pointer" %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+
+  <section>
+    <h2 class="text-lg font-medium mb-3">Claimable rides</h2>
+    <p class="text-sm text-gray-500 mb-3">Requested rides whose pickup zip and level of service match your coverage.</p>
+    <% if @claimable_rides.empty? %>
+      <p class="text-sm text-gray-500">Nothing to claim right now.</p>
+    <% else %>
+      <div class="space-y-3">
+        <% @claimable_rides.each do |ride| %>
+          <div class="border rounded p-4 flex items-center justify-between">
+            <div>
+              <p class="font-medium"><%= ride.patient.name %></p>
+              <p class="text-sm text-gray-500">
+                <%= ride.level_of_service.humanize %> &middot; <%= ride.pickup_zip %> &middot; <%= ride.scheduled_at.strftime("%b %-d, %-I:%M%p") %>
+                <% if ride.needs_authorization? %> &middot; <span class="text-yellow-700">needs authorization</span><% end %>
+              </p>
+            </div>
+            <%= button_to "Claim", ride_claim_path(ride), method: :post, class: "bg-gray-900 text-white rounded px-3 py-1.5 text-sm cursor-pointer" %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+
+<% else %>
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-semibold">Rides</h1>
+    <% if current_coordinator %>
+      <%= link_to "Book a ride", new_ehr_import_path, class: "bg-gray-900 text-white rounded px-4 py-2 text-sm" %>
+    <% end %>
+  </div>
+
+  <table class="w-full text-sm border-collapse">
+    <thead>
+      <tr class="text-left text-gray-500 border-b">
+        <th class="py-2 pr-4">Patient</th>
+        <th class="py-2 pr-4">Scheduled</th>
+        <th class="py-2 pr-4">Level of service</th>
+        <th class="py-2 pr-4">Status</th>
+        <th class="py-2"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @rides.each do |ride| %>
+        <tr class="border-b last:border-0">
+          <td class="py-2 pr-4"><%= ride.patient.name %></td>
+          <td class="py-2 pr-4"><%= ride.scheduled_at.strftime("%b %-d, %Y %-I:%M%p") %></td>
+          <td class="py-2 pr-4"><%= ride.level_of_service.humanize %></td>
+          <td class="py-2 pr-4"><%= ride.status.humanize %></td>
+          <td class="py-2"><%= link_to "View", ride_path(ride), class: "text-gray-600 underline" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

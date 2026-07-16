@@ -1,0 +1,13 @@
+wheelchair_coverage:
+  benefit_plan: basic_medicaid
+  level_of_service: 2 # wheelchair_van
+  covered: true
+  trip_limit: 10
+  prior_auth_required: false
+
+bls_requires_auth:
+  benefit_plan: basic_medicaid
+  level_of_service: 4 # bls_ambulance
+  covered: true
+  trip_limit: 2
+  prior_auth_required: true

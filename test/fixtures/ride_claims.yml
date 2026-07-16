@@ -1,0 +1,5 @@
+acme_active_claim:
+  ride: claimed_ride
+  transport_provider: acme
+  claimed_at: <%= 1.hour.ago.iso8601 %>
+  released_at:

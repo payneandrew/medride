@@ -1,0 +1,20 @@
+pat:
+  first_name: Pat
+  last_name: Ient
+  phone: "555-1212"
+  home_address_line1: 1 Main St
+  home_city: Springfield
+  home_state: IL
+  home_zip: "62704"
+  mobility_needs: 1 # wheelchair
+  benefit_plan: basic_medicaid
+
+ambulatory_amy:
+  first_name: Amy
+  last_name: Bulatory
+  phone: "555-3434"
+  home_address_line1: 5 Oak St
+  home_city: Springfield
+  home_state: IL
+  home_zip: "62701"
+  mobility_needs: 0 # ambulatory

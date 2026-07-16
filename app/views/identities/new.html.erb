@@ -1,0 +1,22 @@
+<% content_for :title, "Sign in - Medride" %>
+
+<h1 class="text-2xl font-semibold mb-6">Who are you?</h1>
+<p class="text-sm text-gray-500 mb-8">No login system here on purpose — pick who you're acting as for this demo.</p>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+  <section>
+    <h2 class="font-medium mb-3">Coordinators</h2>
+    <% @coordinators.each do |coordinator| %>
+      <%= button_to coordinator.name, identity_path(coordinator_id: coordinator.id), method: :post,
+            class: "block w-full text-left border rounded px-4 py-2 mb-2 hover:bg-gray-100" %>
+    <% end %>
+  </section>
+
+  <section>
+    <h2 class="font-medium mb-3">Transport providers</h2>
+    <% @transport_providers.each do |provider| %>
+      <%= button_to provider.name, identity_path(transport_provider_id: provider.id), method: :post,
+            class: "block w-full text-left border rounded px-4 py-2 mb-2 hover:bg-gray-100" %>
+    <% end %>
+  </section>
+</div>

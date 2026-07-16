@@ -1,0 +1,7 @@
+general_hospital:
+  name: General Hospital
+  org_type: 0 # hospital
+
+wellness_health_plan:
+  name: Wellness Health Plan
+  org_type: 1 # health_plan

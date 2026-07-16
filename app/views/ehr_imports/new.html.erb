@@ -1,0 +1,16 @@
+<% content_for :title, "Import from EHR - Medride" %>
+
+<h1 class="text-2xl font-semibold mb-2">Import patient from EHR</h1>
+<p class="text-sm text-gray-500 mb-6">
+  Looks the patient up on the FHIR test server, pulls their demographics and
+  any upcoming appointment, and starts a new ride booking pre-filled with it.
+</p>
+
+<%= form_with url: ehr_import_path, method: :post, class: "space-y-4" do |f| %>
+  <div>
+    <%= f.label :fhir_patient_id, "FHIR patient id", class: "block text-sm font-medium mb-1" %>
+    <%= f.text_field :fhir_patient_id, class: "border rounded px-3 py-2 w-full", placeholder: "e.g. 137019620" %>
+  </div>
+
+  <%= f.submit "Import", class: "bg-gray-900 text-white rounded px-4 py-2 cursor-pointer" %>
+<% end %>
