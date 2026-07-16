@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_16_192400) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_16_201317) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -75,6 +75,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_16_192400) do
     t.datetime "released_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "external_ride_id"
+    t.index ["external_ride_id"], name: "index_ride_claims_on_external_ride_id", unique: true, where: "(external_ride_id IS NOT NULL)"
     t.index ["ride_id"], name: "index_ride_claims_on_active_claim", unique: true, where: "(released_at IS NULL)"
     t.index ["ride_id"], name: "index_ride_claims_on_ride_id"
     t.index ["transport_provider_id"], name: "index_ride_claims_on_transport_provider_id"

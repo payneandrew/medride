@@ -13,6 +13,21 @@ requested_ride:
   level_of_service: 2 # wheelchair_van
   status: 0 # requested
 
+uber_dispatched_ride:
+  patient: pat
+  coordinator: jane
+  pickup_address_line1: 1 Main St
+  pickup_city: Springfield
+  pickup_state: IL
+  pickup_zip: "62704"
+  dropoff_address_line1: 2 Hospital Way
+  dropoff_city: Springfield
+  dropoff_state: IL
+  dropoff_zip: "62701"
+  scheduled_at: <%= 1.day.from_now.iso8601 %>
+  level_of_service: 0 # rideshare
+  status: 1 # claimed
+
 claimed_ride:
   patient: pat
   coordinator: jane

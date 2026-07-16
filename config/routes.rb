@@ -17,6 +17,7 @@ Rails.application.routes.draw do
 
   resources :rides, only: [ :index, :show, :new, :create ] do
     resource :claim, only: [ :create, :destroy ], controller: "ride_claims"
+    resource :uber_health_dispatch, only: [ :create ]
     member do
       patch :start
       patch :complete
@@ -24,6 +25,7 @@ Rails.application.routes.draw do
   end
 
   post "webhooks/ride_status", to: "webhooks#ride_status"
+  post "webhooks/uber_health_ride_status", to: "uber_health_webhooks#ride_status"
 
   root "identities#new"
 end

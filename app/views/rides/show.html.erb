@@ -12,8 +12,17 @@
   <% end %>
   <% if @ride.active_claim %>
     <span class="text-sm text-gray-600">Claimed by <%= @ride.active_claim.transport_provider.name %></span>
+    <% if @ride.active_claim.external_ride_id %>
+      <span class="text-xs text-gray-400">(external ride <%= @ride.active_claim.external_ride_id %>)</span>
+    <% end %>
   <% end %>
 </div>
+
+<% if current_coordinator && @ride.can_claim? && UberHealth::Client::SUPPORTED_LEVELS_OF_SERVICE.include?(@ride.level_of_service) %>
+  <div class="mb-8">
+    <%= button_to "Dispatch via Uber Health", ride_uber_health_dispatch_path(@ride), method: :post, class: "bg-black text-white rounded px-3 py-1.5 text-sm cursor-pointer" %>
+  </div>
+<% end %>
 
 <% if current_transport_provider && @ride.active_claim&.transport_provider == current_transport_provider %>
   <div class="flex gap-2 mb-8">

@@ -49,7 +49,7 @@ springfield_transport = TransportProvider.find_or_create_by!(name: "Springfield 
   p.phone = "217-555-0101"
   p.service_area = %w[62701 62702 62703 62704]
 end
-[ "medical_sedan", "wheelchair_van" ].each do |capability|
+[ "rideshare", "medical_sedan", "wheelchair_van" ].each do |capability|
   springfield_transport.transport_provider_capabilities.find_or_create_by!(capability: capability)
 end
 
@@ -67,6 +67,18 @@ metro_ambulance = TransportProvider.find_or_create_by!(name: "Metro Ambulance Se
 end
 [ "stretcher_van", "bls_ambulance" ].each do |capability|
   metro_ambulance.transport_provider_capabilities.find_or_create_by!(capability: capability)
+end
+
+# Not a marketplace participant: rides get sent to Uber Health via
+# UberHealth::DispatchRide, not claimed through MatchRide, so its
+# service_area is irrelevant and left empty. It still needs a row here
+# since RideClaim#transport_provider has to point at *something*.
+uber_health = TransportProvider.find_or_create_by!(name: "Uber Health") do |p|
+  p.phone = "800-555-0199"
+  p.service_area = []
+end
+UberHealth::Client::SUPPORTED_LEVELS_OF_SERVICE.each do |capability|
+  uber_health.transport_provider_capabilities.find_or_create_by!(capability: capability)
 end
 
 # Patients. Bruce Wayne, Ada Lovelace, and Sam Rivera are real records on

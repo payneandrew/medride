@@ -44,11 +44,11 @@ class Ride < ApplicationRecord
   # unique partial index on ride_claims (ride_id WHERE released_at IS NULL)
   # lets exactly one INSERT succeed; the loser's transaction raises
   # RecordNotUnique, which we translate into AlreadyClaimedError.
-  def claim!(transport_provider, actor: transport_provider)
+  def claim!(transport_provider, actor: transport_provider, external_ride_id: nil)
     raise InvalidTransition, "cannot claim a #{status} ride" unless can_claim?
 
     transaction do
-      ride_claims.create!(transport_provider: transport_provider, claimed_at: Time.current)
+      ride_claims.create!(transport_provider: transport_provider, claimed_at: Time.current, external_ride_id: external_ride_id)
       transition_to!("claimed", actor: actor)
     end
     true

@@ -21,16 +21,14 @@ class WebhooksController < ApplicationController
       return render json: { error: "missing event_id" }, status: :unprocessable_entity
     end
 
-    event = WebhookEvent.new(event_id: event_id, payload: payload)
+    result = RideStatusWebhookIngestion.call(event_id: event_id, payload: payload)
 
-    if event.save
-      RideStatusWebhookJob.perform_later(event.id)
+    if result.accepted
       render json: { status: "accepted" }, status: :accepted
     else
-      # Unique constraint on event_id tripped: we've already seen this
-      # event. Responding 200 here (not an error) is the point — vendors
-      # retry on anything but 2xx, so treating a duplicate as success is
-      # what makes retries safe.
+      # Already seen this event_id. Responding 200 here (not an error) is
+      # the point — vendors retry on anything but 2xx, so treating a
+      # duplicate as success is what makes retries safe.
       render json: { status: "already_processed" }, status: :ok
     end
   rescue JSON::ParserError

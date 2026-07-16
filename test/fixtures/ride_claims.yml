@@ -3,3 +3,10 @@ acme_active_claim:
   transport_provider: acme
   claimed_at: <%= 1.hour.ago.iso8601 %>
   released_at:
+
+uber_active_claim:
+  ride: uber_dispatched_ride
+  transport_provider: uber_health
+  claimed_at: <%= 1.hour.ago.iso8601 %>
+  released_at:
+  external_ride_id: uber-fixture-abc123

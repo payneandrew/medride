@@ -7,3 +7,8 @@ beta:
   name: Beta Medical Transport
   phone: "555-3333"
   service_area: ["62999"]
+
+uber_health:
+  name: Uber Health
+  phone: "800-555-0199"
+  service_area: []
