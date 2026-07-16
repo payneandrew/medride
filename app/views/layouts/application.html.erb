@@ -29,7 +29,7 @@
         <nav class="flex items-center gap-4 text-sm">
           <%= link_to "Rides", rides_path, class: "text-gray-600 hover:text-gray-900" %>
           <% if current_coordinator %>
-            <%= link_to "New ride (EHR import)", new_ehr_import_path, class: "text-gray-600 hover:text-gray-900" %>
+            <%= link_to "Book a ride", new_ehr_import_path, class: "text-gray-600 hover:text-gray-900" %>
             <span class="text-gray-500">Coordinator: <%= current_coordinator.name %></span>
           <% elsif current_transport_provider %>
             <span class="text-gray-500">Provider: <%= current_transport_provider.name %></span>

@@ -14,6 +14,7 @@ Rails.application.routes.draw do
   resource :identity, only: [ :new, :create, :destroy ]
 
   resource :ehr_import, only: [ :new, :create ]
+  get "ehr_import/search", to: "ehr_imports#search", as: :search_ehr_import
 
   resources :rides, only: [ :index, :show, :new, :create ] do
     resource :claim, only: [ :create, :destroy ], controller: "ride_claims"

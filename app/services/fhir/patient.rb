@@ -11,5 +11,23 @@ module Fhir
     def full_name
       [ given_name, family_name ].compact.join(" ")
     end
+
+    # Whether this record has enough demographic info to import — the
+    # public HAPI test server has plenty of name-only records, and
+    # EhrImportsController#create rejects those outright (see the comment
+    # there). Surfacing this in the search results, before a coordinator
+    # clicks Import, is better than letting them find out after.
+    REQUIRED_FIELDS = {
+      given_name: "given name", family_name: "family name", phone: "phone",
+      address_line1: "address", city: "city", state: "state", postal_code: "zip"
+    }.freeze
+
+    def importable?
+      missing_fields.empty?
+    end
+
+    def missing_fields
+      REQUIRED_FIELDS.filter_map { |attr, label| label if send(attr).blank? }
+    end
   end
 end

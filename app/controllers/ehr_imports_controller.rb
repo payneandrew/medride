@@ -2,6 +2,34 @@ class EhrImportsController < ApplicationController
   before_action :require_coordinator!
 
   def new
+    @patients = Patient.order(:last_name, :first_name)
+  end
+
+  # Separate from #new (not just inline on the same page) so the FHIR call
+  # only happens when a coordinator actually searches, and results have
+  # their own bookmarkable/shareable URL. GET, not POST — this doesn't
+  # create anything, just queries the FHIR server.
+  def search
+    @family_name = params[:family_name].to_s.strip
+
+    if @family_name.present?
+      all_matches = fhir_client.search_patients(@family_name)
+      # Records too sparse to import (see Patient#importable?) are filtered
+      # out here rather than shown-but-disabled — the public HAPI test
+      # server has plenty of name-only junk data, and there's nothing a
+      # coordinator can do about a record missing its address anyway. We
+      # still need the raw count, though: silently going from "20 matches"
+      # to "no results" would look like the search itself failed.
+      @results = all_matches.select(&:importable?)
+      @incomplete_match_count = all_matches.size - @results.size
+    else
+      @results = []
+      @incomplete_match_count = 0
+    end
+  rescue Fhir::Client::Error => e
+    @results = []
+    @incomplete_match_count = 0
+    flash.now[:alert] = "FHIR server error: #{e.message}"
   end
 
   def create
