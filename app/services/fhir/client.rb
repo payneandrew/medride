@@ -38,10 +38,14 @@ module Fhir
       resources_from_bundle(reply.resource).map { |resource| parse_appointment(resource) }
     end
 
-    def self.build_connection
-      client = FHIR::Client.new(BASE_URL)
+    # base_url/bearer_token let SmartLaunchesController build a connection
+    # scoped to whatever FHIR server + access token a SMART launch handed
+    # back, instead of this class's fixed, unauthenticated BASE_URL.
+    def self.build_connection(base_url: BASE_URL, bearer_token: nil)
+      client = FHIR::Client.new(base_url)
       client.default_format = "application/fhir+json"
       client.use_r4
+      client.set_bearer_token(bearer_token) if bearer_token
       client
     end
 

@@ -16,6 +16,10 @@ Rails.application.routes.draw do
   resource :ehr_import, only: [ :new, :create ]
   get "ehr_import/search", to: "ehr_imports#search", as: :search_ehr_import
 
+  resource :smart_launch, only: [ :new, :create ], controller: "smart_launches"
+  get "smart/launch", to: "smart_launches#launch", as: :smart_ehr_launch
+  get "smart/callback", to: "smart_launches#callback", as: :smart_callback
+
   resources :rides, only: [ :index, :show, :new, :create ] do
     resource :claim, only: [ :create, :destroy ], controller: "ride_claims"
     resource :uber_health_dispatch, only: [ :create ]

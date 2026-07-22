@@ -467,6 +467,7 @@ DEPENDENCIES
   fhir_client
   importmap-rails
   kamal
+  oauth2
   pg (~> 1.1)
   propshaft
   puma (>= 5.0)

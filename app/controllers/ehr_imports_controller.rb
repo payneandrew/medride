@@ -40,7 +40,7 @@ class EhrImportsController < ApplicationController
       return redirect_to new_ehr_import_path, alert: "No FHIR patient found with id \"#{fhir_id}\""
     end
 
-    patient = upsert_patient(fhir_patient)
+    patient = Fhir::PatientImport.call(fhir_patient)
 
     unless patient.save
       return redirect_to new_ehr_import_path,
@@ -73,31 +73,6 @@ class EhrImportsController < ApplicationController
     fhir_client.fetch_appointments(fhir_id)
       .select { |a| a.start_time&.future? }
       .min_by(&:start_time)
-  end
-
-  # Matched on fhir_id, mapping FHIR Patient fields onto our local record.
-  # In a real system this lookup would go through Patient.identifier
-  # (system + value) — e.g. the MRN issued by *this* facility's identifier
-  # system — rather than the FHIR resource's own server-assigned id, since
-  # the same human can carry different FHIR ids across EHR instances but
-  # keeps the same MRN within one health system.
-  #
-  # Deliberately no "Unknown"/placeholder fallback for missing fields: the
-  # public HAPI test server has plenty of sparse records (name only, no
-  # address or phone), and silently inventing fake demographic data would
-  # let garbage flow straight into a ride booking. Better to fail the
-  # import loudly (see #create) and have the coordinator try a different
-  # patient — Patient's own presence validations are what catch this.
-  def upsert_patient(fhir_patient)
-    patient = Patient.find_or_initialize_by(fhir_id: fhir_patient.fhir_id)
-    patient.first_name = fhir_patient.given_name.presence || patient.first_name
-    patient.last_name = fhir_patient.family_name.presence || patient.last_name
-    patient.phone = fhir_patient.phone.presence || patient.phone
-    patient.home_address_line1 = fhir_patient.address_line1.presence || patient.home_address_line1
-    patient.home_city = fhir_patient.city.presence || patient.home_city
-    patient.home_state = fhir_patient.state.presence || patient.home_state
-    patient.home_zip = fhir_patient.postal_code.presence || patient.home_zip
-    patient
   end
 
   def import_notice(patient, appointment)

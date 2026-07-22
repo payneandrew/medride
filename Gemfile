@@ -42,6 +42,9 @@ gem "thruster", require: false
 
 # Typed FHIR R4 client + resource models for talking to the HAPI FHIR test server
 gem "fhir_client"
+# OAuth2 authorization-code client, used directly for the SMART on FHIR launch's
+# code+PKCE token exchange (already a transitive dependency of fhir_client)
+gem "oauth2"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
