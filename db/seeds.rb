@@ -1,16 +1,17 @@
-# Reference data for local development/demoing. Idempotent (find_or_create_by!)
-# so it's safe to run more than once. Rides themselves aren't seeded here —
-# see bin/ride_lifecycle_demo for a script that books and drives one through
-# its full lifecycle, which is a better way to see the domain model in action
-# than a static fixture row.
+# Reference data — plus a full set of demo rides at the bottom — for local
+# development. The reference data (orgs, plans, providers, patients) is
+# idempotent (find_or_create_by!), safe to run more than once. The rides
+# section is not: it only runs against an empty rides table (see the guard
+# below), so re-running db:seed won't pile up duplicates, but it also won't
+# "fix" ride data you've messed with by hand — reset the db first for that.
 
 hospital = CareOrganization.find_or_create_by!(name: "Springfield General Hospital") { |o| o.org_type = "hospital" }
 health_plan = CareOrganization.find_or_create_by!(name: "Wellness Health Plan") { |o| o.org_type = "health_plan" }
 
-hospital.coordinators.find_or_create_by!(email: "jane.coordinator@springfieldgeneral.example") do |c|
+jane = hospital.coordinators.find_or_create_by!(email: "jane.coordinator@springfieldgeneral.example") do |c|
   c.name = "Jane Coordinator"
 end
-health_plan.coordinators.find_or_create_by!(email: "mike.coordinator@wellnesshealthplan.example") do |c|
+mike = health_plan.coordinators.find_or_create_by!(email: "mike.coordinator@wellnesshealthplan.example") do |c|
   c.name = "Mike Coordinator"
 end
 
@@ -43,11 +44,18 @@ premium_plan = BenefitPlan.find_or_create_by!(name: "Premium Health Plan")
   end
 end
 
-# Three providers with distinct, partly-overlapping zip coverage and
-# capabilities, so MatchRide has something real to filter over.
+# Three providers with distinct, partly-overlapping zip coverage,
+# capabilities, dispatch bases, and pricing, so MatchRide/RankProviders
+# have something real to filter and score over. base_lat/lng are each
+# provider's dispatch base — how RankProviders' DistanceScore estimates
+# proximity to a given pickup; rate_per_mile/base_fare feed PriceScore.
 springfield_transport = TransportProvider.find_or_create_by!(name: "Springfield Medical Transport") do |p|
   p.phone = "217-555-0101"
   p.service_area = %w[62701 62702 62703 62704]
+  p.base_lat = 39.7817 # downtown Springfield, IL
+  p.base_lng = -89.6501
+  p.base_fare_cents = 500
+  p.rate_per_mile_cents = 200
 end
 [ "rideshare", "medical_sedan", "wheelchair_van" ].each do |capability|
   springfield_transport.transport_provider_capabilities.find_or_create_by!(capability: capability)
@@ -56,6 +64,10 @@ end
 milwaukee_nemt = TransportProvider.find_or_create_by!(name: "Milwaukee NEMT Co") do |p|
   p.phone = "414-555-0102"
   p.service_area = %w[53201 53202 53203]
+  p.base_lat = 43.0389 # downtown Milwaukee, WI
+  p.base_lng = -87.9065
+  p.base_fare_cents = 600
+  p.rate_per_mile_cents = 180
 end
 [ "wheelchair_van", "stretcher_van" ].each do |capability|
   milwaukee_nemt.transport_provider_capabilities.find_or_create_by!(capability: capability)
@@ -64,6 +76,14 @@ end
 metro_ambulance = TransportProvider.find_or_create_by!(name: "Metro Ambulance Services") do |p|
   p.phone = "800-555-0103"
   p.service_area = %w[62701 62704 53201]
+  # A regional dispatch hub roughly between its IL and WI coverage, rather
+  # than co-located with either — realistic for a multi-state ambulance
+  # operator, and means it'll usually rank behind the local providers on
+  # distance despite covering the same zips.
+  p.base_lat = 41.8781 # Chicago, IL
+  p.base_lng = -87.6298
+  p.base_fare_cents = 1500
+  p.rate_per_mile_cents = 400
 end
 [ "stretcher_van", "bls_ambulance" ].each do |capability|
   metro_ambulance.transport_provider_capabilities.find_or_create_by!(capability: capability)
@@ -125,7 +145,7 @@ sam = Patient.find_or_create_by!(fhir_id: "137028203") do |p|
   p.benefit_plan = basic_medicaid
 end
 
-Patient.find_or_create_by!(insurance_member_id: "MEDCAID-LOCAL-0001") do |p|
+dana = Patient.find_or_create_by!(insurance_member_id: "MEDCAID-LOCAL-0001") do |p|
   p.first_name = "Dana"
   p.last_name = "Local"
   p.phone = "217-555-0199"
@@ -137,10 +157,134 @@ Patient.find_or_create_by!(insurance_member_id: "MEDCAID-LOCAL-0001") do |p|
   p.benefit_plan = basic_medicaid
 end
 
+# --- Rides ---------------------------------------------------------------
+# Driven through the real Ride state machine methods (claim!/start!/
+# complete!/cancel!), never raw status assignment, so RideClaim's
+# active-claim invariant and RideStatusEvent's audit trail stay exactly as
+# correct as they'd be from real usage. Timestamps are backdated afterward
+# with update_columns purely for narrative realism — a ride "completed 2
+# days ago" shouldn't have an audit trail dated the moment you ran this.
+if Ride.none?
+  def seed_ride!(patient:, coordinator:, pickup:, dropoff:, level_of_service:, scheduled_at:, provider: nil, dispatch_via_uber_health: false, outcome: :requested)
+    eligibility = EligibilityCheck.call(Fhir::EligibilityRequest.new(patient: patient, level_of_service: level_of_service))
+
+    ride = Ride.create!(
+      patient: patient, coordinator: coordinator,
+      pickup_address_line1: pickup[:line1], pickup_city: pickup[:city], pickup_state: pickup[:state], pickup_zip: pickup[:zip],
+      pickup_lat: pickup[:lat], pickup_lng: pickup[:lng],
+      dropoff_address_line1: dropoff[:line1], dropoff_city: dropoff[:city], dropoff_state: dropoff[:state], dropoff_zip: dropoff[:zip],
+      dropoff_lat: dropoff[:lat], dropoff_lng: dropoff[:lng],
+      scheduled_at: scheduled_at, level_of_service: level_of_service,
+      needs_authorization: eligibility.prior_auth_required?
+    )
+    return ride if outcome == :requested
+
+    if dispatch_via_uber_health
+      UberHealth::DispatchRide.call(ride)
+    else
+      ride.claim!(provider)
+    end
+    return backdate_ride_events!(ride, scheduled_at: scheduled_at, outcome: outcome) if outcome == :claimed
+
+    actor = ride.active_claim.transport_provider
+
+    if outcome == :cancelled
+      ride.cancel!(actor: actor)
+      return backdate_ride_events!(ride, scheduled_at: scheduled_at, outcome: outcome)
+    end
+
+    ride.start!(actor: actor)
+    return backdate_ride_events!(ride, scheduled_at: scheduled_at, outcome: outcome) if outcome == :in_progress
+
+    ride.complete!(actor: actor)
+    backdate_ride_events!(ride, scheduled_at: scheduled_at, outcome: outcome)
+  end
+
+  def backdate_ride_events!(ride, scheduled_at:, outcome:)
+    events = ride.ride_status_events.reload.index_by(&:to_status)
+    late = outcome == :completed_late
+
+    events["requested"]&.update_columns(occurred_at: scheduled_at - 2.days)
+    events["claimed"]&.update_columns(occurred_at: scheduled_at - 1.day)
+
+    if events["in_progress"]
+      started_at = late ? scheduled_at + 20.minutes : scheduled_at - 5.minutes
+      events["in_progress"].update_columns(occurred_at: started_at)
+      events["completed"]&.update_columns(occurred_at: started_at + 30.minutes)
+    end
+
+    events["cancelled"]&.update_columns(occurred_at: scheduled_at - 3.hours)
+
+    ride
+  end
+
+  springfield_downtown = { line1: "700 E Adams St", city: "Springfield", state: "IL", zip: "62701", lat: 39.799, lng: -89.644 }
+  springfield_clinic    = { line1: "701 N First St", city: "Springfield", state: "IL", zip: "62702", lat: 39.808, lng: -89.655 }
+  springfield_facility  = { line1: "3140 Kavanaugh Rd", city: "Springfield", state: "IL", zip: "62704", lat: 39.766, lng: -89.673 }
+  milwaukee_downtown    = { line1: "200 E Wells St", city: "Milwaukee", state: "WI", zip: "53202", lat: 43.041, lng: -87.907 }
+  milwaukee_clinic      = { line1: "8701 W Watertown Plank Rd", city: "Milwaukee", state: "WI", zip: "53226", lat: 43.047, lng: -87.985 }
+
+  # Bruce Wayne (wheelchair) x Springfield Medical Transport
+  seed_ride!(patient: bruce, coordinator: jane, pickup: springfield_downtown, dropoff: springfield_clinic,
+    level_of_service: "wheelchair_van", scheduled_at: 1.day.from_now.change(hour: 10),
+    outcome: :requested) # unclaimed — shows up ranked under "Claimable rides"
+
+  seed_ride!(patient: bruce, coordinator: jane, pickup: springfield_downtown, dropoff: springfield_clinic,
+    level_of_service: "wheelchair_van", scheduled_at: 3.hours.from_now,
+    provider: springfield_transport, outcome: :claimed) # claimed, not started — a ready target for firing test webhooks against
+
+  seed_ride!(patient: bruce, coordinator: jane, pickup: springfield_downtown, dropoff: springfield_clinic,
+    level_of_service: "wheelchair_van", scheduled_at: 1.hour.from_now,
+    provider: springfield_transport, outcome: :in_progress)
+
+  seed_ride!(patient: bruce, coordinator: jane, pickup: springfield_downtown, dropoff: springfield_clinic,
+    level_of_service: "wheelchair_van", scheduled_at: 2.days.ago,
+    provider: springfield_transport, outcome: :completed_on_time)
+
+  seed_ride!(patient: bruce, coordinator: jane, pickup: springfield_downtown, dropoff: springfield_clinic,
+    level_of_service: "medical_sedan", scheduled_at: 4.days.ago,
+    provider: springfield_transport, outcome: :completed_late) # gives Springfield Medical Transport mixed (not perfect) reliability
+
+  # Ada Lovelace (ambulatory) — Milwaukee NEMT Co only offers wheelchair/stretcher
+  # vans, so a medical_sedan request has zero marketplace matches: the
+  # "dispatch via Uber Health" fallback is the only path, by design.
+  seed_ride!(patient: ada, coordinator: mike, pickup: milwaukee_downtown, dropoff: milwaukee_clinic,
+    level_of_service: "medical_sedan", scheduled_at: 1.day.from_now.change(hour: 14),
+    outcome: :requested)
+
+  seed_ride!(patient: ada, coordinator: mike, pickup: milwaukee_downtown, dropoff: milwaukee_clinic,
+    level_of_service: "rideshare", scheduled_at: 5.days.ago,
+    dispatch_via_uber_health: true, outcome: :completed_on_time)
+
+  # Sam Rivera (stretcher) x Milwaukee NEMT Co
+  seed_ride!(patient: sam, coordinator: mike, pickup: milwaukee_downtown, dropoff: milwaukee_clinic,
+    level_of_service: "stretcher_van", scheduled_at: 1.day.from_now.change(hour: 9),
+    outcome: :requested)
+
+  seed_ride!(patient: sam, coordinator: mike, pickup: milwaukee_downtown, dropoff: milwaukee_clinic,
+    level_of_service: "stretcher_van", scheduled_at: 3.days.ago,
+    provider: milwaukee_nemt, outcome: :completed_on_time)
+
+  seed_ride!(patient: sam, coordinator: mike, pickup: milwaukee_downtown, dropoff: milwaukee_clinic,
+    level_of_service: "stretcher_van", scheduled_at: 6.days.ago,
+    provider: milwaukee_nemt, outcome: :cancelled) # gives Milwaukee NEMT Co a mixed completion rate too
+
+  # Dana Local (bls_needed) x Metro Ambulance Services — bls_ambulance
+  # requires prior auth on Basic Medicaid, so needs_authorization is true here.
+  seed_ride!(patient: dana, coordinator: jane, pickup: springfield_facility, dropoff: springfield_clinic,
+    level_of_service: "bls_ambulance", scheduled_at: 1.day.from_now.change(hour: 8),
+    outcome: :requested)
+
+  seed_ride!(patient: dana, coordinator: jane, pickup: springfield_facility, dropoff: springfield_clinic,
+    level_of_service: "bls_ambulance", scheduled_at: 3.days.ago,
+    provider: metro_ambulance, outcome: :completed_on_time)
+end
+
 puts <<~SUMMARY
   Seeded:
     #{CareOrganization.count} care organizations, #{Coordinator.count} coordinators
     #{BenefitPlan.count} benefit plans, #{BenefitCoverageRule.count} coverage rules
     #{TransportProvider.count} transport providers, #{TransportProviderCapability.count} capabilities
     #{Patient.count} patients (FHIR-linked: #{Patient.where.not(fhir_id: nil).count})
+    #{Ride.count} rides (#{Ride.group(:status).count.map { |s, n| "#{n} #{s}" }.join(', ')})
 SUMMARY

@@ -51,6 +51,40 @@
   </div>
 </section>
 
+<% if @ranked_providers.present? %>
+  <section class="mb-8">
+    <h2 class="text-lg font-medium mb-1">Eligible providers</h2>
+    <p class="text-sm text-gray-500 mb-3">Ranked by reliability, dispatch distance, and estimated price.</p>
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr class="text-left text-gray-500 border-b">
+          <th class="py-2 pr-4">Provider</th>
+          <th class="py-2 pr-4">Reliability</th>
+          <th class="py-2 pr-4">Distance</th>
+          <th class="py-2 pr-4">Est. price</th>
+          <th class="py-2">Match score</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @ranked_providers.each do |result| %>
+          <tr class="border-b last:border-0">
+            <td class="py-2 pr-4 font-medium"><%= result.transport_provider.name %></td>
+            <td class="py-2 pr-4"><%= number_to_percentage(result.reliability_score * 100, precision: 0) %></td>
+            <td class="py-2 pr-4"><%= result.distance_miles ? "#{result.distance_miles.round(1)} mi" : "unknown" %></td>
+            <td class="py-2 pr-4"><%= number_to_currency(result.estimated_price_cents / 100.0) %></td>
+            <td class="py-2"><%= result.score.round(2) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% elsif @ranked_providers&.empty? %>
+  <section class="mb-8">
+    <h2 class="text-lg font-medium mb-1">Eligible providers</h2>
+    <p class="text-sm text-gray-500">No providers currently cover this pickup zip and level of service.</p>
+  </section>
+<% end %>
+
 <section>
   <h2 class="text-lg font-medium mb-3">Status audit trail</h2>
   <table class="w-full text-sm border-collapse">

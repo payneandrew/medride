@@ -25,6 +25,7 @@ class RidesController < ApplicationController
   end
 
   def show
+    @ranked_providers = RankProviders.call(@ride) if current_coordinator && @ride.requested?
   end
 
   def start
@@ -113,8 +114,8 @@ class RidesController < ApplicationController
   def ride_params
     params.require(:ride).permit(
       :patient_id, :scheduled_at, :level_of_service,
-      :pickup_address_line1, :pickup_city, :pickup_state, :pickup_zip,
-      :dropoff_address_line1, :dropoff_city, :dropoff_state, :dropoff_zip
+      :pickup_address_line1, :pickup_city, :pickup_state, :pickup_zip, :pickup_lat, :pickup_lng,
+      :dropoff_address_line1, :dropoff_city, :dropoff_state, :dropoff_zip, :dropoff_lat, :dropoff_lng
     )
   end
 end

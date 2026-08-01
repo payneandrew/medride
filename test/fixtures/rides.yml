@@ -5,10 +5,14 @@ requested_ride:
   pickup_city: Springfield
   pickup_state: IL
   pickup_zip: "62704"
+  pickup_lat: 39.79
+  pickup_lng: -89.64
   dropoff_address_line1: 2 Hospital Way
   dropoff_city: Springfield
   dropoff_state: IL
   dropoff_zip: "62701"
+  dropoff_lat: 39.81
+  dropoff_lng: -89.66
   scheduled_at: <%= 1.day.from_now.iso8601 %>
   level_of_service: 2 # wheelchair_van
   status: 0 # requested

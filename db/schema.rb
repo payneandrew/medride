@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_16_201317) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_01_003520) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -114,6 +114,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_16_201317) do
     t.boolean "needs_authorization", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "pickup_lat", precision: 9, scale: 6
+    t.decimal "pickup_lng", precision: 9, scale: 6
+    t.decimal "dropoff_lat", precision: 9, scale: 6
+    t.decimal "dropoff_lng", precision: 9, scale: 6
     t.index ["coordinator_id"], name: "index_rides_on_coordinator_id"
     t.index ["patient_id"], name: "index_rides_on_patient_id"
     t.index ["pickup_zip"], name: "index_rides_on_pickup_zip"
@@ -135,6 +139,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_16_201317) do
     t.string "service_area", default: [], null: false, array: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "base_lat", precision: 9, scale: 6
+    t.decimal "base_lng", precision: 9, scale: 6
+    t.integer "base_fare_cents", default: 500, null: false
+    t.integer "rate_per_mile_cents", default: 200, null: false
     t.index ["service_area"], name: "index_transport_providers_on_service_area", using: :gin
   end
 

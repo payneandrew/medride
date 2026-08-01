@@ -15,7 +15,7 @@ const ACTIVE_CLASSES = [ "bg-gray-100" ]
 // The search box is the only way to set an address — line1/city/state/zip
 // are hidden fields it fills in on selection, submitted as part of the form.
 export default class extends Controller {
-  static targets = [ "mount", "line1", "city", "state", "zip" ]
+  static targets = [ "mount", "line1", "city", "state", "zip", "lat", "lng" ]
 
   connect() {
     this.activeIndex = -1
@@ -174,6 +174,18 @@ export default class extends Controller {
     this.cityTarget.value = city || ""
     this.stateTarget.value = state || ""
     this.zipTarget.value = postcode || ""
+
+    // GeoJSON coordinate order is [lng, lat], not [lat, lng] — easy to get
+    // backwards. Only present for a picked (geocoded) result, never for a
+    // hand-typed address, which is why Ride#trip_miles and
+    // ProviderRanking::DistanceScore treat missing coordinates as
+    // expected, not an error.
+    if (this.hasLatTarget && this.hasLngTarget) {
+      const [ lng, lat ] = feature.geometry?.coordinates ?? []
+      this.latTarget.value = lat ?? ""
+      this.lngTarget.value = lng ?? ""
+    }
+
     this.clearResults()
   }
 

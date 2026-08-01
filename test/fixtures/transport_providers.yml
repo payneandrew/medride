@@ -2,6 +2,10 @@ acme:
   name: Acme Transport
   phone: "555-2222"
   service_area: ["62704", "62701"]
+  base_lat: 39.7817
+  base_lng: -89.6501
+  base_fare_cents: 500
+  rate_per_mile_cents: 200
 
 beta:
   name: Beta Medical Transport

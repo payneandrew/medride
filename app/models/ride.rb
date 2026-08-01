@@ -25,6 +25,14 @@ class Ride < ApplicationRecord
     ride_claims.active.first
   end
 
+  # nil unless both pickup and dropoff were captured with coordinates (i.e.
+  # picked via the Places Autocomplete widget, not hand-typed) — see
+  # ProviderRanking::PriceScore, which falls back to an estimate when this
+  # is unknown rather than requiring it.
+  def trip_miles
+    Geo::Haversine.miles(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng)
+  end
+
   # --- Guards ---------------------------------------------------------
   # Kept as separate predicate methods (rather than one big case statement)
   # so the UI can ask "can_claim?" to decide whether to render a button,

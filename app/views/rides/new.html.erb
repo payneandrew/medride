@@ -37,6 +37,8 @@
     <%= f.hidden_field :pickup_city, data: { address_autocomplete_target: "city" } %>
     <%= f.hidden_field :pickup_state, data: { address_autocomplete_target: "state" } %>
     <%= f.hidden_field :pickup_zip, data: { address_autocomplete_target: "zip" } %>
+    <%= f.hidden_field :pickup_lat, data: { address_autocomplete_target: "lat" } %>
+    <%= f.hidden_field :pickup_lng, data: { address_autocomplete_target: "lng" } %>
   </fieldset>
 
   <fieldset class="border rounded p-4" data-controller="address-autocomplete">
@@ -47,6 +49,8 @@
     <%= f.hidden_field :dropoff_city, data: { address_autocomplete_target: "city" } %>
     <%= f.hidden_field :dropoff_state, data: { address_autocomplete_target: "state" } %>
     <%= f.hidden_field :dropoff_zip, data: { address_autocomplete_target: "zip" } %>
+    <%= f.hidden_field :dropoff_lat, data: { address_autocomplete_target: "lat" } %>
+    <%= f.hidden_field :dropoff_lng, data: { address_autocomplete_target: "lng" } %>
   </fieldset>
 
   <%= f.submit "Book ride", class: "bg-gray-900 text-white rounded px-4 py-2 cursor-pointer" %>
