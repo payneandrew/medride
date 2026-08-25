@@ -9,7 +9,7 @@ const PHOTON_URL = "https://photon.komoot.io/api/"
 const DEBOUNCE_MS = 300
 const MIN_QUERY_LENGTH = 3
 
-const ACTIVE_CLASSES = [ "bg-gray-100" ]
+const ACTIVE_CLASSES = [ "bg-accent-soft" ]
 
 // Connects to app/views/rides/new.html.erb's pickup/dropoff address blocks.
 // The search box is the only way to set an address — line1/city/state/zip
@@ -28,13 +28,13 @@ export default class extends Controller {
     this.input.type = "text"
     this.input.autocomplete = "off"
     this.input.placeholder = "Start typing an address…"
-    this.input.className = "border rounded px-3 py-2 w-full"
+    this.input.className = "w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-shadow"
     this.input.setAttribute("role", "combobox")
     this.input.setAttribute("aria-expanded", "false")
     this.input.setAttribute("aria-autocomplete", "list")
 
     this.results = document.createElement("ul")
-    this.results.className = "absolute z-10 w-full bg-white border rounded shadow-sm mt-1 max-h-56 overflow-y-auto empty:hidden"
+    this.results.className = "absolute z-10 w-full rounded-lg border border-line bg-panel shadow-lg mt-1 max-h-56 overflow-y-auto empty:hidden"
     this.results.setAttribute("role", "listbox")
 
     this.wrapper.append(this.input, this.results)
@@ -121,7 +121,7 @@ export default class extends Controller {
 
     const li = document.createElement("li")
     li.textContent = text
-    li.className = "px-3 py-2 text-sm text-gray-500"
+    li.className = "px-3 py-2 text-sm text-muted"
     this.results.appendChild(li)
     this.input.setAttribute("aria-expanded", "true")
   }
@@ -143,11 +143,11 @@ export default class extends Controller {
       primary.textContent = this.formatLine1(feature.properties)
 
       const secondary = document.createElement("div")
-      secondary.className = "text-xs text-gray-500"
+      secondary.className = "text-xs text-faint"
       secondary.textContent = [ city, state, postcode ].filter(Boolean).join(", ")
 
       const li = document.createElement("li")
-      li.className = "px-3 py-2 cursor-pointer hover:bg-gray-100"
+      li.className = "px-3 py-2 cursor-pointer hover:bg-accent-soft transition-colors"
       li.setAttribute("role", "option")
       li.setAttribute("aria-selected", "false")
       li.append(primary, secondary)

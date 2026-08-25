@@ -1,0 +1,25 @@
+<div id="<%= dom_id(ride, :active) %>" class="flex items-center justify-between gap-4 px-5 py-3.5">
+  <div class="flex items-center gap-3 min-w-0">
+    <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent font-semibold text-sm">
+      <%= ride.patient.first_name.first.upcase %>
+    </span>
+    <div class="min-w-0">
+      <p class="font-medium truncate"><%= link_to ride.patient.name, ride_path(ride), class: "hover:text-accent transition-colors" %></p>
+      <p class="text-sm text-faint truncate">
+        <%= level_of_service_label(ride.level_of_service) %> &middot; <%= ride.scheduled_at.strftime("%b %-d, %-I:%M%p") %>
+      </p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2 shrink-0">
+    <%= ride_status_badge(ride.status) %>
+    <% if ride.can_start? %>
+      <%= button_to "Start", start_ride_path(ride), method: :patch, class: btn_primary %>
+    <% end %>
+    <% if ride.can_complete? %>
+      <%= button_to "Complete", complete_ride_path(ride), method: :patch, class: btn_primary %>
+    <% end %>
+    <% if ride.can_release? %>
+      <%= button_to "Release", ride_claim_path(ride), method: :delete, class: btn_subtle_danger %>
+    <% end %>
+  </div>
+</div>

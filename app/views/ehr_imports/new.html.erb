@@ -1,20 +1,25 @@
 <% content_for :title, "Book a ride - Medride" %>
 
-<h1 class="text-2xl font-semibold mb-6">Book a ride</h1>
+<h1 class="text-2xl font-semibold tracking-tight mb-8">Book a ride</h1>
 
 <section class="mb-10">
-  <h2 class="text-lg font-medium mb-3">Existing patients</h2>
+  <h2 class="text-sm font-semibold text-faint uppercase tracking-wide mb-3">Existing patients</h2>
   <% if @patients.empty? %>
-    <p class="text-sm text-gray-500">No patients yet — import one from the EHR below.</p>
+    <div class="<%= card_classes("text-sm text-muted") %>">No patients yet — import one from the EHR below.</div>
   <% else %>
-    <div class="divide-y border rounded">
+    <div class="<%= card_classes("divide-y divide-line p-0") %>">
       <% @patients.each do |patient| %>
-        <div class="flex items-center justify-between px-4 py-3">
-          <div>
-            <p class="font-medium"><%= patient.name %></p>
-            <p class="text-sm text-gray-500"><%= patient.home_city %>, <%= patient.home_state %> &middot; <%= patient.phone %></p>
+        <div class="flex items-center justify-between gap-4 px-5 py-3.5">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent font-semibold text-sm">
+              <%= patient.first_name.first.upcase %>
+            </span>
+            <div class="min-w-0">
+              <p class="font-medium truncate"><%= patient.name %></p>
+              <p class="text-sm text-faint truncate"><%= patient.home_city %>, <%= patient.home_state %> &middot; <%= patient.phone %></p>
+            </div>
           </div>
-          <%= link_to "Book a ride", new_ride_path(patient_id: patient.id), class: "bg-gray-900 text-white rounded px-3 py-1.5 text-sm" %>
+          <%= link_to "Book a ride", new_ride_path(patient_id: patient.id), class: "#{btn_primary} shrink-0" %>
         </div>
       <% end %>
     </div>
@@ -22,15 +27,17 @@
 </section>
 
 <section>
-  <h2 class="text-lg font-medium mb-2">Import a new patient from the EHR</h2>
-  <p class="text-sm text-gray-500 mb-4">
-    Search the FHIR test server by last name, then pick the right patient from
-    the results — pulls their demographics and any upcoming appointment, and
-    starts a new ride booking pre-filled with it.
-  </p>
+  <h2 class="text-sm font-semibold text-faint uppercase tracking-wide mb-3">Import a new patient from the EHR</h2>
+  <div class="<%= card_classes %>">
+    <p class="text-sm text-muted mb-4">
+      Search the FHIR test server by last name, then pick the right patient from
+      the results — pulls their demographics and any upcoming appointment, and
+      starts a new ride booking pre-filled with it.
+    </p>
 
-  <%= form_with url: search_ehr_import_path, method: :get, class: "flex gap-2" do |f| %>
-    <%= f.text_field :family_name, class: "border rounded px-3 py-2 flex-1", placeholder: "Last name, e.g. Wayne" %>
-    <%= f.submit "Search", class: "bg-gray-900 text-white rounded px-4 py-2 cursor-pointer" %>
-  <% end %>
+    <%= form_with url: search_ehr_import_path, method: :get, class: "flex gap-2" do |f| %>
+      <%= f.text_field :family_name, class: input_classes, placeholder: "Last name, e.g. Wayne" %>
+      <%= f.submit "Search", class: "#{btn_primary} whitespace-nowrap" %>
+    <% end %>
+  </div>
 </section>

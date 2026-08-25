@@ -1,22 +1,46 @@
 <% content_for :title, "Sign in - Medride" %>
 
-<h1 class="text-2xl font-semibold mb-6">Who are you?</h1>
-<p class="text-sm text-gray-500 mb-8">No login system here on purpose — pick who you're acting as for this demo.</p>
+<div class="mx-auto max-w-2xl">
+  <div class="mb-10 text-center">
+    <h1 class="text-2xl font-semibold tracking-tight">Who are you?</h1>
+    <p class="mt-2 text-sm text-muted">No login system here on purpose — pick who you're acting as for this demo.</p>
+  </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
-  <section>
-    <h2 class="font-medium mb-3">Coordinators</h2>
-    <% @coordinators.each do |coordinator| %>
-      <%= button_to coordinator.name, identity_path(coordinator_id: coordinator.id), method: :post,
-            class: "block w-full text-left border rounded px-4 py-2 mb-2 hover:bg-gray-100" %>
-    <% end %>
-  </section>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+    <section>
+      <h2 class="mb-3 text-xs font-semibold uppercase tracking-wide text-faint">Coordinators</h2>
+      <div class="space-y-2">
+        <% @coordinators.each do |coordinator| %>
+          <%= button_to identity_path(coordinator_id: coordinator.id), method: :post,
+                class: "group flex w-full items-center gap-3 rounded-xl border border-line bg-panel px-4 py-3 text-left transition-colors hover:border-accent/40 hover:bg-accent-soft cursor-pointer" do %>
+            <span class="flex size-9 items-center justify-center rounded-full bg-accent-soft text-accent font-semibold group-hover:bg-panel">
+              <%= coordinator.name.first.upcase %>
+            </span>
+            <span>
+              <span class="block text-sm font-medium"><%= coordinator.name %></span>
+              <span class="block text-xs text-faint"><%= coordinator.care_organization.name %></span>
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+    </section>
 
-  <section>
-    <h2 class="font-medium mb-3">Transport providers</h2>
-    <% @transport_providers.each do |provider| %>
-      <%= button_to provider.name, identity_path(transport_provider_id: provider.id), method: :post,
-            class: "block w-full text-left border rounded px-4 py-2 mb-2 hover:bg-gray-100" %>
-    <% end %>
-  </section>
+    <section>
+      <h2 class="mb-3 text-xs font-semibold uppercase tracking-wide text-faint">Transport providers</h2>
+      <div class="space-y-2">
+        <% @transport_providers.each do |provider| %>
+          <%= button_to identity_path(transport_provider_id: provider.id), method: :post,
+                class: "group flex w-full items-center gap-3 rounded-xl border border-line bg-panel px-4 py-3 text-left transition-colors hover:border-accent/40 hover:bg-accent-soft cursor-pointer" do %>
+            <span class="flex size-9 items-center justify-center rounded-full bg-accent-soft text-accent font-semibold group-hover:bg-panel">
+              <%= provider.name.first.upcase %>
+            </span>
+            <span>
+              <span class="block text-sm font-medium"><%= provider.name %></span>
+              <span class="block text-xs text-faint"><%= provider.service_area.any? ? "#{provider.service_area.size} zips covered" : "On-demand dispatch" %></span>
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+    </section>
+  </div>
 </div>

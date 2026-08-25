@@ -1,0 +1,31 @@
+<%
+  my_result = ranking&.find { |r| r.transport_provider == current_transport_provider }
+  my_rank = my_result && ranking.index(my_result) + 1
+%>
+<div id="<%= dom_id(ride, :claimable) %>" class="flex items-center justify-between gap-4 px-5 py-3.5">
+  <div class="flex items-center gap-3 min-w-0">
+    <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent font-semibold text-sm">
+      <%= ride.patient.first_name.first.upcase %>
+    </span>
+    <div class="min-w-0">
+      <p class="font-medium truncate"><%= ride.patient.name %></p>
+      <p class="text-sm text-faint truncate">
+        <%= level_of_service_label(ride.level_of_service) %> &middot; <%= ride.pickup_zip %> &middot; <%= ride.scheduled_at.strftime("%b %-d, %-I:%M%p") %>
+      </p>
+      <% if my_result %>
+        <p class="mt-1 flex items-center gap-1.5 text-xs text-muted">
+          <%= rank_badge(my_rank, ranking.size) %>
+          <span class="tabular-nums"><%= number_to_percentage(my_result.reliability_score * 100, precision: 0) %> reliable</span>
+          <span class="text-faint">&middot;</span>
+          <span class="tabular-nums"><%= my_result.distance_miles ? "#{my_result.distance_miles.round(1)} mi away" : "distance unknown" %></span>
+          <span class="text-faint">&middot;</span>
+          <span class="tabular-nums">~<%= number_to_currency(my_result.estimated_price_cents / 100.0) %></span>
+        </p>
+      <% end %>
+    </div>
+  </div>
+  <div class="flex items-center gap-2 shrink-0">
+    <% if ride.needs_authorization? %><%= needs_authorization_badge %><% end %>
+    <%= button_to "Claim", ride_claim_path(ride), method: :post, class: btn_primary %>
+  </div>
+</div>

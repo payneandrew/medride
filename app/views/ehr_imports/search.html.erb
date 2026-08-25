@@ -1,36 +1,40 @@
 <% content_for :title, "Search the EHR - Medride" %>
 
-<h1 class="text-2xl font-semibold mb-6">Search the EHR</h1>
+<h1 class="text-2xl font-semibold tracking-tight mb-6">Search the EHR</h1>
 
-<%= form_with url: search_ehr_import_path, method: :get, class: "flex gap-2 mb-6" do |f| %>
-  <%= f.text_field :family_name, value: @family_name, class: "border rounded px-3 py-2 flex-1", placeholder: "Last name, e.g. Wayne" %>
-  <%= f.submit "Search", class: "bg-gray-900 text-white rounded px-4 py-2 cursor-pointer" %>
+<%= form_with url: search_ehr_import_path, method: :get, class: "flex gap-2 mb-8" do |f| %>
+  <%= f.text_field :family_name, value: @family_name, class: input_classes, placeholder: "Last name, e.g. Wayne", autofocus: true %>
+  <%= f.submit "Search", class: "#{btn_primary} whitespace-nowrap" %>
 <% end %>
 
 <% if @family_name.blank? %>
-  <p class="text-sm text-gray-500">Enter a last name above to search the FHIR test server.</p>
+  <p class="text-sm text-muted">Enter a last name above to search the FHIR test server.</p>
 <% elsif @results.empty? && @incomplete_match_count.zero? %>
-  <p class="text-sm text-gray-500">No FHIR patients found with last name "<%= @family_name %>".</p>
+  <p class="text-sm text-muted">No FHIR patients found with last name "<%= @family_name %>".</p>
 <% elsif @results.empty? %>
-  <p class="text-sm text-gray-500">
+  <p class="text-sm text-muted">
     Found <%= pluralize(@incomplete_match_count, "match") %> for "<%= @family_name %>", but none had enough
     demographic data (address/phone) on file to import — try a different search.
   </p>
 <% else %>
-  <p class="text-sm text-gray-500 mb-3"><%= pluralize(@results.count, "result") %> for "<%= @family_name %>":</p>
-  <div class="divide-y border rounded">
+  <p class="text-sm text-muted mb-3"><%= pluralize(@results.count, "result") %> for "<%= @family_name %>":</p>
+  <div class="<%= card_classes("divide-y divide-line p-0") %>">
     <% @results.each do |result| %>
-      <div class="flex items-center justify-between px-4 py-3">
-        <div>
-          <p class="font-medium"><%= result.full_name %></p>
-          <p class="text-sm text-gray-500">
-            FHIR id <%= result.fhir_id %>
-            <% if result.birth_date %> &middot; born <%= result.birth_date %><% end %>
-            <% if result.city %> &middot; <%= result.city %>, <%= result.state %><% end %>
-          </p>
+      <div class="flex items-center justify-between gap-4 px-5 py-3.5">
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent font-semibold text-sm">
+            <%= result.full_name.first.upcase %>
+          </span>
+          <div class="min-w-0">
+            <p class="font-medium truncate"><%= result.full_name %></p>
+            <p class="text-sm text-faint truncate font-mono">
+              #<%= result.fhir_id %>
+              <% if result.birth_date %><span class="font-sans">&middot; born <%= result.birth_date %></span><% end %>
+              <% if result.city %><span class="font-sans">&middot; <%= result.city %>, <%= result.state %></span><% end %>
+            </p>
+          </div>
         </div>
-        <%= button_to "Import", ehr_import_path(fhir_patient_id: result.fhir_id), method: :post,
-              class: "bg-gray-900 text-white rounded px-3 py-1.5 text-sm cursor-pointer" %>
+        <%= button_to "Import", ehr_import_path(fhir_patient_id: result.fhir_id), method: :post, class: "#{btn_primary} shrink-0" %>
       </div>
     <% end %>
   </div>

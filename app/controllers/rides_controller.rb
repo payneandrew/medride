@@ -14,6 +14,10 @@ class RidesController < ApplicationController
         .where(pickup_zip: current_transport_provider.service_area)
         .where(level_of_service: current_transport_provider.transport_provider_capabilities.select(:capability))
         .order(:scheduled_at)
+      # Where does *this* provider stand against whoever else could take
+      # each ride — not just "am I eligible" (that's already true for
+      # everything in @claimable_rides) but "am I actually the best fit."
+      @rankings_by_ride_id = @claimable_rides.index_with { |ride| RankProviders.call(ride) }
       @my_rides = Ride.joins(:ride_claims)
         .where(ride_claims: { transport_provider_id: current_transport_provider.id, released_at: nil })
         .order(:scheduled_at)
@@ -31,17 +35,17 @@ class RidesController < ApplicationController
   def start
     authorize_active_claim!
     @ride.start!(actor: current_transport_provider)
-    redirect_to @ride, notice: "Ride started"
+    respond_with_ride_update(notice: "Ride started")
   rescue Ride::InvalidTransition => e
-    redirect_to @ride, alert: e.message
+    respond_with_failure(e)
   end
 
   def complete
     authorize_active_claim!
     @ride.complete!(actor: current_transport_provider)
-    redirect_to @ride, notice: "Ride completed"
+    respond_with_ride_update(notice: "Ride completed")
   rescue Ride::InvalidTransition => e
-    redirect_to @ride, alert: e.message
+    respond_with_failure(e)
   end
 
   def new
@@ -109,6 +113,35 @@ class RidesController < ApplicationController
     return if @ride.active_claim&.transport_provider == current_transport_provider
 
     raise Ride::InvalidTransition, "you don't hold the active claim on this ride"
+  end
+
+  # Start/complete can be triggered from either the ride show page or a row
+  # in the provider dashboard's "My active rides" list — the turbo_stream
+  # response updates both possible targets; whichever isn't on the current
+  # page is silently a no-op (Turbo just skips targets it can't find).
+  def respond_with_ride_update(notice:)
+    respond_to do |format|
+      format.turbo_stream do
+        flash.now[:notice] = notice
+        render turbo_stream: [
+          turbo_stream.replace(helpers.dom_id(@ride, :header), partial: "rides/header", locals: { ride: @ride }),
+          turbo_stream.replace(helpers.dom_id(@ride, :active), partial: "rides/active_ride_row", locals: { ride: @ride }),
+          turbo_stream.replace(helpers.dom_id(@ride, :audit_trail), partial: "rides/audit_trail", locals: { ride: @ride }),
+          turbo_stream.replace("flash", partial: "shared/flash")
+        ]
+      end
+      format.html { redirect_to @ride, notice: notice }
+    end
+  end
+
+  def respond_with_failure(error)
+    respond_to do |format|
+      format.turbo_stream do
+        flash.now[:alert] = error.message
+        render turbo_stream: turbo_stream.replace("flash", partial: "shared/flash")
+      end
+      format.html { redirect_to @ride, alert: error.message }
+    end
   end
 
   def ride_params

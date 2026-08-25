@@ -1,0 +1,27 @@
+<section id="<%= dom_id(ride, :audit_trail) %>">
+  <h2 class="text-sm font-semibold text-faint uppercase tracking-wide mb-3">Status audit trail</h2>
+  <div class="<%= card_classes %>">
+    <ol class="space-y-0">
+      <% ride.ride_status_events.each_with_index do |event, index| %>
+        <li class="relative flex gap-4 pb-6 last:pb-0">
+          <% unless index == ride.ride_status_events.size - 1 %>
+            <span class="absolute left-1.75 top-4 bottom-0 w-px bg-line"></span>
+          <% end %>
+          <span class="relative z-10 mt-1.5 size-3.75 shrink-0 rounded-full border-2 border-panel bg-accent"></span>
+          <div class="min-w-0 -mt-0.5">
+            <p class="text-sm">
+              <% if event.from_status %>
+                <span class="text-muted"><%= event.from_status.humanize %></span>
+                <span class="text-faint">&rarr;</span>
+              <% end %>
+              <span class="font-medium"><%= event.to_status.humanize %></span>
+            </p>
+            <p class="text-xs text-faint mt-0.5">
+              <%= event.occurred_at.strftime("%b %-d, %Y &middot; %-I:%M:%S%p").html_safe %> &middot; <%= event.actor_label %>
+            </p>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+  </div>
+</section>

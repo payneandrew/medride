@@ -22,31 +22,43 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="bg-gray-50 text-gray-900">
-    <header class="bg-white border-b border-gray-200">
-      <div class="container mx-auto px-5 py-3 flex items-center justify-between">
-        <%= link_to "Medride", root_path, class: "font-semibold text-lg" %>
-        <nav class="flex items-center gap-4 text-sm">
-          <%= link_to "Rides", rides_path, class: "text-gray-600 hover:text-gray-900" %>
+  <body class="min-h-screen bg-paper text-ink antialiased">
+    <header class="sticky top-0 z-10 border-b border-line bg-panel/90 backdrop-blur">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-3">
+        <%= link_to root_path, class: "flex items-center gap-2 shrink-0" do %>
+          <span class="flex size-7 items-center justify-center rounded-lg bg-accent text-accent-ink font-bold text-sm">M</span>
+          <span class="font-semibold tracking-tight">medride</span>
+        <% end %>
+
+        <nav class="flex flex-1 items-center gap-1 text-sm">
+          <%= link_to "Rides", rides_path, class: "rounded-md px-3 py-1.5 font-medium text-muted hover:bg-paper hover:text-ink transition-colors" %>
           <% if current_coordinator %>
-            <%= link_to "Book a ride", new_ehr_import_path, class: "text-gray-600 hover:text-gray-900" %>
-            <%= link_to "SMART on FHIR", new_smart_launch_path, class: "text-gray-600 hover:text-gray-900" %>
-            <span class="text-gray-500">Coordinator: <%= current_coordinator.name %></span>
-          <% elsif current_transport_provider %>
-            <span class="text-gray-500">Provider: <%= current_transport_provider.name %></span>
+            <%= link_to "Book a ride", new_ehr_import_path, class: "rounded-md px-3 py-1.5 font-medium text-muted hover:bg-paper hover:text-ink transition-colors" %>
+            <%= link_to "Connect EHR", new_smart_launch_path, class: "rounded-md px-3 py-1.5 font-medium text-muted hover:bg-paper hover:text-ink transition-colors" %>
           <% end %>
-          <%= button_to "Sign out", identity_path, method: :delete, class: "text-gray-600 hover:text-gray-900 underline bg-transparent border-0 p-0 cursor-pointer" %>
         </nav>
+
+        <div class="flex items-center gap-3 shrink-0">
+          <% if current_coordinator || current_transport_provider %>
+            <% person = current_coordinator || current_transport_provider %>
+            <div class="hidden sm:flex items-center gap-2 rounded-full bg-paper py-1 pl-1 pr-3">
+              <span class="flex size-6 items-center justify-center rounded-full bg-accent-soft text-accent text-xs font-semibold">
+                <%= person.name.first.upcase %>
+              </span>
+              <span class="text-xs">
+                <span class="font-medium"><%= person.name %></span>
+                <span class="text-faint"><%= current_coordinator ? " · Coordinator" : " · Provider" %></span>
+              </span>
+            </div>
+            <%= button_to "Sign out", identity_path, method: :delete,
+                  class: "rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:bg-paper hover:text-ink transition-colors cursor-pointer" %>
+          <% end %>
+        </div>
       </div>
     </header>
 
-    <main class="container mx-auto mt-8 px-5 max-w-3xl">
-      <% if notice %>
-        <p class="mb-4 rounded bg-green-50 text-green-800 px-4 py-2 text-sm"><%= notice %></p>
-      <% end %>
-      <% if alert %>
-        <p class="mb-4 rounded bg-red-50 text-red-800 px-4 py-2 text-sm"><%= alert %></p>
-      <% end %>
+    <main class="mx-auto max-w-6xl px-6 py-8">
+      <%= render "shared/flash" %>
 
       <%= yield %>
     </main>

@@ -89,6 +89,49 @@ end
   metro_ambulance.transport_provider_capabilities.find_or_create_by!(capability: capability)
 end
 
+# Three more providers, each a direct competitor to one of the above on the
+# same zips/capabilities but with a different base location and pricing —
+# without real competition, RankProviders has nothing to rank (every
+# claimable ride would have exactly one eligible provider).
+prairie_capital = TransportProvider.find_or_create_by!(name: "Prairie Capital Transport") do |p|
+  p.phone = "217-555-0104"
+  p.service_area = %w[62701 62702 62703 62704]
+  p.base_lat = 39.746 # south Springfield — same city as Springfield Medical Transport, different base
+  p.base_lng = -89.653
+  p.base_fare_cents = 400 # cheaper base fare...
+  p.rate_per_mile_cents = 240 # ...but a pricier per-mile rate: cheaper for short trips, pricier for long ones
+end
+[ "rideshare", "medical_sedan", "wheelchair_van" ].each do |capability|
+  prairie_capital.transport_provider_capabilities.find_or_create_by!(capability: capability)
+end
+
+lakefront_medical = TransportProvider.find_or_create_by!(name: "Lakefront Medical Rides") do |p|
+  p.phone = "414-555-0105"
+  p.service_area = %w[53201 53202 53203]
+  p.base_lat = 43.055 # Milwaukee's east side — competes directly with Milwaukee NEMT Co
+  p.base_lng = -87.882
+  p.base_fare_cents = 500
+  p.rate_per_mile_cents = 220
+end
+[ "wheelchair_van", "stretcher_van" ].each do |capability|
+  lakefront_medical.transport_provider_capabilities.find_or_create_by!(capability: capability)
+end
+
+rapid_response = TransportProvider.find_or_create_by!(name: "Rapid Response EMS") do |p|
+  p.phone = "217-555-0106"
+  p.service_area = %w[62701 62702 62704]
+  # Springfield-based, unlike Metro Ambulance's Chicago hub — closer and
+  # cheaper, but (see its ride history below) less reliable. A real tradeoff,
+  # not a strictly-better-or-worse competitor.
+  p.base_lat = 39.79
+  p.base_lng = -89.65
+  p.base_fare_cents = 1200
+  p.rate_per_mile_cents = 350
+end
+[ "stretcher_van", "bls_ambulance" ].each do |capability|
+  rapid_response.transport_provider_capabilities.find_or_create_by!(capability: capability)
+end
+
 # Not a marketplace participant: rides get sent to Uber Health via
 # UberHealth::DispatchRide, not claimed through MatchRide, so its
 # service_area is irrelevant and left empty. It still needs a row here
@@ -157,6 +200,33 @@ dana = Patient.find_or_create_by!(insurance_member_id: "MEDCAID-LOCAL-0001") do 
   p.benefit_plan = basic_medicaid
 end
 
+# Two more local-only patients, positioned near the new competing
+# providers' bases (south Springfield / Milwaukee's east side) so their
+# ride requests genuinely favor a different provider than Bruce's/Sam's do.
+maria = Patient.find_or_create_by!(insurance_member_id: "PREMIUM-LOCAL-0002") do |p|
+  p.first_name = "Maria"
+  p.last_name = "Chen"
+  p.phone = "217-555-0155"
+  p.home_address_line1 = "2200 S MacArthur Blvd"
+  p.home_city = "Springfield"
+  p.home_state = "IL"
+  p.home_zip = "62704"
+  p.mobility_needs = "wheelchair"
+  p.benefit_plan = premium_plan
+end
+
+marcus = Patient.find_or_create_by!(insurance_member_id: "MEDCAID-LOCAL-0003") do |p|
+  p.first_name = "Marcus"
+  p.last_name = "Webb"
+  p.phone = "414-555-0166"
+  p.home_address_line1 = "1555 N Prospect Ave"
+  p.home_city = "Milwaukee"
+  p.home_state = "WI"
+  p.home_zip = "53202"
+  p.mobility_needs = "stretcher"
+  p.benefit_plan = basic_medicaid
+end
+
 # --- Rides ---------------------------------------------------------------
 # Driven through the real Ride state machine methods (claim!/start!/
 # complete!/cancel!), never raw status assignment, so RideClaim's
@@ -221,8 +291,10 @@ if Ride.none?
   springfield_downtown = { line1: "700 E Adams St", city: "Springfield", state: "IL", zip: "62701", lat: 39.799, lng: -89.644 }
   springfield_clinic    = { line1: "701 N First St", city: "Springfield", state: "IL", zip: "62702", lat: 39.808, lng: -89.655 }
   springfield_facility  = { line1: "3140 Kavanaugh Rd", city: "Springfield", state: "IL", zip: "62704", lat: 39.766, lng: -89.673 }
+  springfield_south     = { line1: "2200 S MacArthur Blvd", city: "Springfield", state: "IL", zip: "62704", lat: 39.749, lng: -89.653 }
   milwaukee_downtown    = { line1: "200 E Wells St", city: "Milwaukee", state: "WI", zip: "53202", lat: 43.041, lng: -87.907 }
   milwaukee_clinic      = { line1: "8701 W Watertown Plank Rd", city: "Milwaukee", state: "WI", zip: "53226", lat: 43.047, lng: -87.985 }
+  milwaukee_eastside    = { line1: "1555 N Prospect Ave", city: "Milwaukee", state: "WI", zip: "53202", lat: 43.052, lng: -87.885 }
 
   # Bruce Wayne (wheelchair) x Springfield Medical Transport
   seed_ride!(patient: bruce, coordinator: jane, pickup: springfield_downtown, dropoff: springfield_clinic,
@@ -278,6 +350,39 @@ if Ride.none?
   seed_ride!(patient: dana, coordinator: jane, pickup: springfield_facility, dropoff: springfield_clinic,
     level_of_service: "bls_ambulance", scheduled_at: 3.days.ago,
     provider: metro_ambulance, outcome: :completed_on_time)
+
+  # --- History for the three newer competing providers, so their
+  # reliability scores are real numbers, not everyone's shared 0.75 default.
+  seed_ride!(patient: bruce, coordinator: jane, pickup: springfield_downtown, dropoff: springfield_clinic,
+    level_of_service: "wheelchair_van", scheduled_at: 7.days.ago,
+    provider: prairie_capital, outcome: :completed_on_time)
+  seed_ride!(patient: bruce, coordinator: jane, pickup: springfield_downtown, dropoff: springfield_clinic,
+    level_of_service: "wheelchair_van", scheduled_at: 11.days.ago,
+    provider: prairie_capital, outcome: :completed_on_time) # perfect reliability — contrast against Springfield Medical Transport's 0.8
+
+  seed_ride!(patient: sam, coordinator: mike, pickup: milwaukee_downtown, dropoff: milwaukee_clinic,
+    level_of_service: "stretcher_van", scheduled_at: 5.days.ago,
+    provider: lakefront_medical, outcome: :completed_on_time)
+  seed_ride!(patient: sam, coordinator: mike, pickup: milwaukee_downtown, dropoff: milwaukee_clinic,
+    level_of_service: "stretcher_van", scheduled_at: 9.days.ago,
+    provider: lakefront_medical, outcome: :completed_late)
+
+  seed_ride!(patient: dana, coordinator: jane, pickup: springfield_facility, dropoff: springfield_clinic,
+    level_of_service: "bls_ambulance", scheduled_at: 5.days.ago,
+    provider: rapid_response, outcome: :cancelled)
+  seed_ride!(patient: dana, coordinator: jane, pickup: springfield_facility, dropoff: springfield_clinic,
+    level_of_service: "bls_ambulance", scheduled_at: 9.days.ago,
+    provider: rapid_response, outcome: :completed_on_time) # closer & cheaper than Metro Ambulance, but less reliable — a real tradeoff
+
+  # --- More claimable rides, positioned so they actually contest between
+  # two eligible providers instead of each ride having exactly one match.
+  seed_ride!(patient: maria, coordinator: jane, pickup: springfield_south, dropoff: springfield_clinic,
+    level_of_service: "wheelchair_van", scheduled_at: 1.day.from_now.change(hour: 11),
+    outcome: :requested) # Springfield Medical Transport vs Prairie Capital Transport — this pickup favors Prairie on distance
+
+  seed_ride!(patient: marcus, coordinator: mike, pickup: milwaukee_eastside, dropoff: milwaukee_clinic,
+    level_of_service: "stretcher_van", scheduled_at: 1.day.from_now.change(hour: 13),
+    outcome: :requested) # Milwaukee NEMT Co vs Lakefront Medical Rides — this pickup favors Lakefront on distance
 end
 
 puts <<~SUMMARY

@@ -1,110 +1,65 @@
 <% content_for :title, "Ride ##{@ride.id} - Medride" %>
 
-<h1 class="text-2xl font-semibold mb-1">Ride #<%= @ride.id %></h1>
-<p class="text-sm text-gray-500 mb-6">
-  <%= @ride.patient.name %> &middot; <%= @ride.level_of_service.humanize %> &middot; <%= @ride.scheduled_at.strftime("%b %-d, %Y %-I:%M%p") %>
-</p>
+<%= render "header", ride: @ride %>
 
-<div class="flex items-center gap-3 mb-8">
-  <span class="inline-block rounded-full px-3 py-1 text-sm font-medium bg-gray-900 text-white"><%= @ride.status.humanize %></span>
-  <% if @ride.needs_authorization? %>
-    <span class="inline-block rounded-full px-3 py-1 text-sm font-medium bg-yellow-100 text-yellow-800">Needs authorization</span>
-  <% end %>
-  <% if @ride.active_claim %>
-    <span class="text-sm text-gray-600">Claimed by <%= @ride.active_claim.transport_provider.name %></span>
-    <% if @ride.active_claim.external_ride_id %>
-      <span class="text-xs text-gray-400">(external ride <%= @ride.active_claim.external_ride_id %>)</span>
-    <% end %>
-  <% end %>
-</div>
-
-<% if current_coordinator && @ride.can_claim? && UberHealth::Client::SUPPORTED_LEVELS_OF_SERVICE.include?(@ride.level_of_service) %>
-  <div class="mb-8">
-    <%= button_to "Dispatch via Uber Health", ride_uber_health_dispatch_path(@ride), method: :post, class: "bg-black text-white rounded px-3 py-1.5 text-sm cursor-pointer" %>
+<section class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+  <div class="<%= card_classes %>">
+    <h2 class="flex items-center gap-1.5 text-xs font-semibold text-faint uppercase tracking-wide mb-2">
+      <span class="size-1.5 rounded-full bg-status-completed"></span> Pickup
+    </h2>
+    <p class="text-sm"><%= @ride.pickup_address_line1 %></p>
+    <p class="text-sm text-muted"><%= @ride.pickup_city %>, <%= @ride.pickup_state %> <%= @ride.pickup_zip %></p>
   </div>
-<% end %>
-
-<% if current_transport_provider && @ride.active_claim&.transport_provider == current_transport_provider %>
-  <div class="flex gap-2 mb-8">
-    <% if @ride.can_start? %>
-      <%= button_to "Start", start_ride_path(@ride), method: :patch, class: "bg-gray-900 text-white rounded px-3 py-1.5 text-sm cursor-pointer" %>
-    <% end %>
-    <% if @ride.can_complete? %>
-      <%= button_to "Complete", complete_ride_path(@ride), method: :patch, class: "bg-gray-900 text-white rounded px-3 py-1.5 text-sm cursor-pointer" %>
-    <% end %>
-    <% if @ride.can_release? %>
-      <%= button_to "Release", ride_claim_path(@ride), method: :delete, class: "border rounded px-3 py-1.5 text-sm cursor-pointer" %>
-    <% end %>
-  </div>
-<% end %>
-
-<section class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-  <div>
-    <h2 class="text-sm font-medium text-gray-500 mb-1">Pickup</h2>
-    <p><%= @ride.pickup_address_line1 %></p>
-    <p><%= @ride.pickup_city %>, <%= @ride.pickup_state %> <%= @ride.pickup_zip %></p>
-  </div>
-  <div>
-    <h2 class="text-sm font-medium text-gray-500 mb-1">Dropoff</h2>
-    <p><%= @ride.dropoff_address_line1 %></p>
-    <p><%= @ride.dropoff_city %>, <%= @ride.dropoff_state %> <%= @ride.dropoff_zip %></p>
+  <div class="<%= card_classes %>">
+    <h2 class="flex items-center gap-1.5 text-xs font-semibold text-faint uppercase tracking-wide mb-2">
+      <span class="size-1.5 rounded-full bg-status-cancelled"></span> Dropoff
+    </h2>
+    <p class="text-sm"><%= @ride.dropoff_address_line1 %></p>
+    <p class="text-sm text-muted"><%= @ride.dropoff_city %>, <%= @ride.dropoff_state %> <%= @ride.dropoff_zip %></p>
   </div>
 </section>
 
 <% if @ranked_providers.present? %>
-  <section class="mb-8">
-    <h2 class="text-lg font-medium mb-1">Eligible providers</h2>
-    <p class="text-sm text-gray-500 mb-3">Ranked by reliability, dispatch distance, and estimated price.</p>
-    <table class="w-full text-sm border-collapse">
-      <thead>
-        <tr class="text-left text-gray-500 border-b">
-          <th class="py-2 pr-4">Provider</th>
-          <th class="py-2 pr-4">Reliability</th>
-          <th class="py-2 pr-4">Distance</th>
-          <th class="py-2 pr-4">Est. price</th>
-          <th class="py-2">Match score</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @ranked_providers.each do |result| %>
-          <tr class="border-b last:border-0">
-            <td class="py-2 pr-4 font-medium"><%= result.transport_provider.name %></td>
-            <td class="py-2 pr-4"><%= number_to_percentage(result.reliability_score * 100, precision: 0) %></td>
-            <td class="py-2 pr-4"><%= result.distance_miles ? "#{result.distance_miles.round(1)} mi" : "unknown" %></td>
-            <td class="py-2 pr-4"><%= number_to_currency(result.estimated_price_cents / 100.0) %></td>
-            <td class="py-2"><%= result.score.round(2) %></td>
+  <section class="mb-6">
+    <h2 class="text-sm font-semibold text-faint uppercase tracking-wide mb-1">Eligible providers</h2>
+    <p class="text-sm text-muted mb-3">Ranked by reliability, dispatch distance, and estimated price.</p>
+    <div class="<%= card_classes("p-0 overflow-hidden") %>">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="text-left text-faint border-b border-line">
+            <th class="py-2.5 px-5 font-medium">Provider</th>
+            <th class="py-2.5 px-4 font-medium">Reliability</th>
+            <th class="py-2.5 px-4 font-medium">Distance</th>
+            <th class="py-2.5 px-4 font-medium">Est. price</th>
+            <th class="py-2.5 px-5 font-medium">Match score</th>
           </tr>
-        <% end %>
-      </tbody>
-    </table>
+        </thead>
+        <tbody class="divide-y divide-line">
+          <% @ranked_providers.each do |result| %>
+            <tr class="hover:bg-paper transition-colors">
+              <td class="py-3 px-5 font-medium"><%= result.transport_provider.name %></td>
+              <td class="py-3 px-4 text-muted tabular-nums"><%= number_to_percentage(result.reliability_score * 100, precision: 0) %></td>
+              <td class="py-3 px-4 text-muted tabular-nums"><%= result.distance_miles ? "#{result.distance_miles.round(1)} mi" : "unknown" %></td>
+              <td class="py-3 px-4 text-muted tabular-nums"><%= number_to_currency(result.estimated_price_cents / 100.0) %></td>
+              <td class="py-3 px-5">
+                <div class="flex items-center gap-2">
+                  <div class="h-1.5 w-16 rounded-full bg-paper overflow-hidden">
+                    <div class="h-full rounded-full bg-accent" style="width: <%= (result.score * 100).round %>%"></div>
+                  </div>
+                  <span class="tabular-nums text-xs text-muted"><%= result.score.round(2) %></span>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
   </section>
 <% elsif @ranked_providers&.empty? %>
-  <section class="mb-8">
-    <h2 class="text-lg font-medium mb-1">Eligible providers</h2>
-    <p class="text-sm text-gray-500">No providers currently cover this pickup zip and level of service.</p>
+  <section class="mb-6">
+    <h2 class="text-sm font-semibold text-faint uppercase tracking-wide mb-1">Eligible providers</h2>
+    <div class="<%= card_classes("text-sm text-muted") %>">No providers currently cover this pickup zip and level of service.</div>
   </section>
 <% end %>
 
-<section>
-  <h2 class="text-lg font-medium mb-3">Status audit trail</h2>
-  <table class="w-full text-sm border-collapse">
-    <thead>
-      <tr class="text-left text-gray-500 border-b">
-        <th class="py-2 pr-4">When</th>
-        <th class="py-2 pr-4">From</th>
-        <th class="py-2 pr-4">To</th>
-        <th class="py-2">Actor</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% @ride.ride_status_events.each do |event| %>
-        <tr class="border-b last:border-0">
-          <td class="py-2 pr-4"><%= event.occurred_at.strftime("%b %-d %-I:%M:%S%p") %></td>
-          <td class="py-2 pr-4"><%= event.from_status&.humanize || "—" %></td>
-          <td class="py-2 pr-4"><%= event.to_status.humanize %></td>
-          <td class="py-2"><%= event.actor_label %></td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
-</section>
+<%= render "audit_trail", ride: @ride %>
